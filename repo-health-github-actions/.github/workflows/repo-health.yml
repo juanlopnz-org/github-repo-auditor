@@ -1,0 +1,46 @@
+name: repo-health
+
+on:
+  workflow_dispatch:
+    inputs:
+      stale_days:
+        description: "Días sin commits para marcar rama como no usada"
+        required: false
+        default: "30"
+  schedule:
+    - cron: "0 6 * * *"
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: install
+        run: npm ci
+
+      - name: run analysis
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          STALE_DAYS: ${{ github.event.inputs.stale_days || '30' }}
+          EXCLUDE_BRANCHES: "main,master,develop"
+        run: node scripts/repo-health.js
+
+      - name: commit reports
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add reports/*
+          git commit -m "chore(reports): update repo health" || echo "No changes"
+          git push
