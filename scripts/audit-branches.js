@@ -2,7 +2,7 @@ import { Octokit } from "@octokit/rest";
 import fs from "fs";
 
 const ORG = process.env.ORG;
-const TOKEN = process.env.GITHUB_TOKEN;
+const TOKEN = process.env.GH_TOKEN;
 
 if (!ORG || !TOKEN) {
   console.error("ORG or GITHUB_TOKEN missing");
