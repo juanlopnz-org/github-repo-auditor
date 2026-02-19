@@ -21,6 +21,8 @@
   },
   "homepage": "https://github.com/juanlopnz-org/repository-manage#readme",
   "dependencies": {
-    "csv-stringify": "^6.6.0"
+    "@octokit/rest": "^22.0.1",
+    "csv-stringify": "^6.6.0",
+    "octokit": "^5.0.5"
   }
 }

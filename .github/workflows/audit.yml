@@ -1,0 +1,40 @@
+name: Auditoria de Repositorios
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 11 * * 1" # Lunes 6:00am Colombia (11:00 UTC) - m h dm m dw
+
+env:
+  ORG: juanlopnz-org
+  INACTIVITY_DAYS: 5
+  INACTIVITY_HOURS: 10
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run auditor
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/audit-branches.js
+
+      - name: Upload report
+        uses: actions/upload-artifact@v4
+        with:
+          name: audit-report
+          path: output/
