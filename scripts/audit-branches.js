@@ -1,4 +1,5 @@
 import { Octokit } from "@octokit/rest";
+import { stringify } from "csv-stringify/sync";
 import fs from "fs";
 
 const ORG = process.env.ORG;
@@ -25,13 +26,13 @@ async function getRepositories() {
 
   return repos
     .filter(repo => !repo.archived && !repo.disabled)
-    .map(repo => ({
-      name: repo.name,
-      private: repo.private,
-      default_branch: repo.default_branch,
-      last_push: repo.pushed_at,
-      updated_at: repo.updated_at,
-    }));
+    // .map(repo => ({
+    //   name: repo.name,
+    //   private: repo.private,
+    //   default_branch: repo.default_branch,
+    //   last_push: repo.pushed_at,
+    //   updated_at: repo.updated_at,
+    // }));
 }
 
 async function main() {
@@ -46,6 +47,22 @@ async function main() {
     );
 
     console.log("Report generated successfully");
+
+    const csv = stringify(repos, {
+      header: true,
+      columns: {
+        name: "Repository",
+        private: "Private",
+        default_branch: "Default Branch",
+        last_push: "Last Push",
+        updated_at: "Last Update"
+      }
+    });
+
+    fs.writeFileSync("output/repos.csv", csv);
+
+    console.log("CSV report generated");
+
 
   } catch (error) {
     console.error("GitHub API error:");
