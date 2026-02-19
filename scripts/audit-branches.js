@@ -26,13 +26,33 @@ async function getRepositories() {
 
   return repos
     .filter(repo => !repo.archived && !repo.disabled)
-    // .map(repo => ({
-    //   name: repo.name,
-    //   private: repo.private,
-    //   default_branch: repo.default_branch,
-    //   last_push: repo.pushed_at,
-    //   updated_at: repo.updated_at,
-    // }));
+    .map(repo => {
+      const inactiveDays = daysSince(repo.pushed_at);
+      return {
+        repository: repo.name,
+        visibility: repo.visibility,
+        private: repo.private,
+        archived: repo.archived,
+        default_branch: repo.default_branch,
+        main_language: repo.language,
+        size_kb: repo.size,
+        open_issues: repo.open_issues_count,
+        last_code_push: repo.pushed_at,
+        last_repo_update: repo.updated_at,
+        inactiveDays: inactiveDays,
+        status:
+          inactiveDays < 30 ? "ACTIVE" :
+            inactiveDays < 90 ? "STALE" :
+              "ABANDONED"
+      }
+    });
+
+}
+
+function daysSince(dateString) {
+  const now = new Date();
+  const past = new Date(dateString);
+  return Math.floor((now - past) / (1000 * 60 * 60 * 24));
 }
 
 async function main() {
@@ -51,11 +71,18 @@ async function main() {
     const csv = stringify(repos, {
       header: true,
       columns: {
-        name: "Repository",
+        repository: "Repository",
+        visibility: "Visibility",
         private: "Private",
+        archived: "Archived",
         default_branch: "Default Branch",
-        last_push: "Last Push",
-        updated_at: "Last Update"
+        main_language: "Main Language",
+        size_kb: "Size (KB)",
+        open_issues: "Open Issues",
+        last_code_push: "Last Code Push",
+        last_repo_update: "Last Repo Update",
+        inactiveDays: "Inactive Days",
+        status: "Status"
       }
     });
 
