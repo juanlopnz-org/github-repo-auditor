@@ -1,6 +1,7 @@
 {
-  "name": "repository-manage",
+  "name": "github-repo-auditor",
   "version": "1.0.0",
+  "type": "module",
   "description": "",
   "main": "index.js",
   "directories": {
@@ -11,15 +12,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/juanlopnz-org/repository-manage.git"
+    "url": "git+https://github.com/juanlopnz-org/github-repo-auditor.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/juanlopnz-org/repository-manage/issues"
+    "url": "https://github.com/juanlopnz-org/github-repo-auditor/issues"
   },
-  "homepage": "https://github.com/juanlopnz-org/repository-manage#readme",
+  "homepage": "https://github.com/juanlopnz-org/github-repo-auditor#readme",
   "dependencies": {
     "@octokit/rest": "^22.0.1",
     "csv-stringify": "^6.6.0",
