@@ -59,12 +59,8 @@ async function main() {
 
   ensureOutputDir();
 
-  // 1. Fetch + clasificación de repos (sin I/O, sin network extra)
   const allRepos = await getRepositories();
 
-  // 2. Auditoría con concurrencia controlada + checkpointing.
-  //    Promise.all retorna AuditedRepo[] directamente — sin side effects laterales.
-  //    Esto garantiza que allAuditedRepos siempre tiene branches embebidas.
   const limit = pLimit(CONCURRENCY);
   let audited = 0;
 
@@ -83,17 +79,13 @@ async function main() {
     )
   );
 
-  // 3. Unificar: repos auditados (branches embebidas).
-  //    El JSON contiene TODOS los repos de la org para visibilidad completa.
   const allAuditedRepos = auditedActive;
 
-  // 4. Generar reportes — todos los reporters reciben el mismo array unificado
   console.log("\n[REPORTS] Writing output files...");
   writeJsonReport(allAuditedRepos, OUTPUT_DIR);       // JSON jerárquico
   writeReposCsv(allAuditedRepos, OUTPUT_DIR);         // CSV plano de repos (branches strip internamente)
   writeBranchesCsv(allAuditedRepos, OUTPUT_DIR);      // CSV plano de branches (flatMap internamente)
 
-  // Limpiar checkpoint si el run completó exitosamente
   const checkpointPath = `${OUTPUT_DIR}/checkpoint_repos.json`;
   if (fs.existsSync(checkpointPath)) fs.unlinkSync(checkpointPath);
 

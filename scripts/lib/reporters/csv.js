@@ -34,7 +34,6 @@ const BRANCHES_COLUMNS = {
  * @param {string} outputDir
  */
 export function writeReposCsv(repos, outputDir) {
-  // Extraer branches antes de serializar — csv-stringify no soporta arrays anidados
   const flat = repos.map(({ branches: _b, ...rest }) => rest);
   const csv = stringify(flat, { header: true, columns: REPOS_COLUMNS });
   const filePath = path.join(outputDir, "repos.csv");
