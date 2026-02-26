@@ -30,21 +30,28 @@ const BRANCHES_COLUMNS = {
 };
 
 /**
- * @param {import("../repos.js").RepoRecord[]} repos
+ * @param {Array<import("../repos.js").RepoRecord & { branches?: any[] }>} repos
  * @param {string} outputDir
  */
 export function writeReposCsv(repos, outputDir) {
-  const csv = stringify(repos, { header: true, columns: REPOS_COLUMNS });
+  // Extraer branches antes de serializar — csv-stringify no soporta arrays anidados
+  const flat = repos.map(({ branches: _b, ...rest }) => rest);
+  const csv = stringify(flat, { header: true, columns: REPOS_COLUMNS });
   const filePath = path.join(outputDir, "repos.csv");
   fs.writeFileSync(filePath, csv, "utf-8");
   console.log(`[CSV] Repos report written → ${filePath} (${repos.length} rows)`);
 }
 
 /**
- * @param {import("../branches.js").BranchRecord[]} branches
+ * Recibe auditedRepos y extrae las ramas con flatMap.
+ * El CSV de branches sigue siendo plano (es su naturaleza tabular),
+ * con la columna `repository` como FK hacia el CSV de repos.
+ *
+ * @param {Array<{ branches: import("../branches.js").BranchRecord[] }>} auditedRepos
  * @param {string} outputDir
  */
-export function writeBranchesCsv(branches, outputDir) {
+export function writeBranchesCsv(auditedRepos, outputDir) {
+  const branches = auditedRepos.flatMap(r => r.branches);
   const csv = stringify(branches, { header: true, columns: BRANCHES_COLUMNS });
   const filePath = path.join(outputDir, "branches.csv");
   fs.writeFileSync(filePath, csv, "utf-8");

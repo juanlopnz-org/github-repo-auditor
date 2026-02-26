@@ -38,14 +38,15 @@ function ensureOutputDir() {
 }
 
 /**
- * Guarda el estado parcial de la auditoría para recuperación ante timeout.
+ * Guarda el estado parcial de repos auditados para recuperación ante timeout.
  *
- * @param {import("./lib/branches.js").BranchRecord[]} branches
+ * @param {Array<import("./lib/repos.js").RepoRecord & { branches: any[] }>} repos
  */
-function saveCheckpoint(branches) {
-  const filePath = `${OUTPUT_DIR}/checkpoint_branches.json`;
-  fs.writeFileSync(filePath, JSON.stringify(branches, null, 2), "utf-8");
-  console.log(`[CHECKPOINT] Saved ${branches.length} branch records → ${filePath}`);
+function saveCheckpoint(repos) {
+  const filePath = `${OUTPUT_DIR}/checkpoint_repos.json`;
+  fs.writeFileSync(filePath, JSON.stringify(repos, null, 2), "utf-8");
+  const total = repos.reduce((n, r) => n + r.branches.length, 0);
+  console.log(`[CHECKPOINT] Saved ${repos.length} repos, ${total} branches → ${filePath}`);
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
@@ -61,41 +62,49 @@ async function main() {
   // 1. Fetch + clasificación de repos (sin I/O, sin network extra)
   const allRepos = await getRepositories();
 
-  // 2. Solo auditar repos ACTIVE — repos STALE/ABANDONED no generan valor
+  // 2. Separar repos a auditar — repos STALE/ABANDONED no aportan valor en auditoría de ramas
   const activeRepos = allRepos.filter(r => r.status === "ACTIVE");
-  console.log(`\n[AUDIT] Auditing ${activeRepos.length} ACTIVE repos (skipping ${allRepos.length - activeRepos.length} STALE/ABANDONED)\n`);
+  const nonActiveRepos = allRepos.filter(r => r.status !== "ACTIVE");
+  console.log(`\n[AUDIT] Auditing ${activeRepos.length} ACTIVE repos (skipping ${nonActiveRepos.length} STALE/ABANDONED)\n`);
 
   // 3. Auditoría con concurrencia controlada + checkpointing
+  //    Cada auditRepo retorna { ...repoRecord, branches: BranchRecord[] } (aggregate root)
   const limit = pLimit(CONCURRENCY);
-  const allBranches = [];
+  const auditedActive = [];
   let audited = 0;
 
-  const tasks = activeRepos.map(repo =>
-    limit(async () => {
-      const branches = await auditRepo(repo);
-      allBranches.push(...branches);
-      audited++;
+  await Promise.all(
+    activeRepos.map(repo =>
+      limit(async () => {
+        const auditedRepo = await auditRepo(repo);
+        auditedActive.push(auditedRepo);
+        audited++;
 
-      if (audited % CHECKPOINT_INTERVAL === 0) {
-        saveCheckpoint(allBranches);
-      }
-
-      return branches;
-    })
+        if (audited % CHECKPOINT_INTERVAL === 0) {
+          saveCheckpoint(auditedActive);
+        }
+      })
+    )
   );
 
-  await Promise.all(tasks);
+  // 4. Unificar: repos auditados (con branches) + repos no-activos (branches vacías)
+  //    El JSON final contiene TODOS los repos de la org para visibilidad completa
+  const allAuditedRepos = [
+    ...auditedActive,
+    ...nonActiveRepos.map(r => ({ ...r, branches: [] })),
+  ];
 
-  console.log(`\n[AUDIT] Done. ${audited} repos audited, ${allBranches.length} branches recorded.`);
+  const totalBranches = allAuditedRepos.reduce((n, r) => n + r.branches.length, 0);
+  console.log(`\n[AUDIT] Done. ${audited} repos audited, ${totalBranches} branches recorded.`);
 
-  // 4. Generar reportes
+  // 5. Generar reportes — todos los reporters reciben el mismo array unificado
   console.log("\n[REPORTS] Writing output files...");
-  writeJsonReport({ repos: allRepos, branches: allBranches }, OUTPUT_DIR);
-  writeReposCsv(allRepos, OUTPUT_DIR);
-  writeBranchesCsv(allBranches, OUTPUT_DIR);
+  writeJsonReport(allAuditedRepos, OUTPUT_DIR);       // JSON jerárquico
+  writeReposCsv(allAuditedRepos, OUTPUT_DIR);         // CSV plano de repos (branches strip internamente)
+  writeBranchesCsv(allAuditedRepos, OUTPUT_DIR);      // CSV plano de branches (flatMap internamente)
 
   // Limpiar checkpoint si el run completó exitosamente
-  const checkpointPath = `${OUTPUT_DIR}/checkpoint_branches.json`;
+  const checkpointPath = `${OUTPUT_DIR}/checkpoint_repos.json`;
   if (fs.existsSync(checkpointPath)) fs.unlinkSync(checkpointPath);
 
   console.log("\n✅ Audit completed successfully.");

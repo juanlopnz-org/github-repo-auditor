@@ -138,5 +138,5 @@ export async function auditRepo(repoRecord) {
     });
   }
 
-  return results;
+  return { ...repoRecord, branches: results };
 }
