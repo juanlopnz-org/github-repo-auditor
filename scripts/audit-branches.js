@@ -97,9 +97,6 @@ async function main() {
     ...allRepos,
   ];
 
-  const totalBranches = allAuditedRepos.reduce((n, r) => n + r.branches.length, 0);
-  console.log(`\n[AUDIT] Done. ${audited} repos audited, ${totalBranches} branches recorded.`);
-
   // 5. Generar reportes — todos los reporters reciben el mismo array unificado
   console.log("\n[REPORTS] Writing output files...");
   writeJsonReport(allAuditedRepos, OUTPUT_DIR);       // JSON jerárquico
