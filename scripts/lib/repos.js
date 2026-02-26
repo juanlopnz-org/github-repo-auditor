@@ -6,6 +6,7 @@ const ORG = process.env.ORG;
 /**
  * @typedef {Object} RepoRecord
  * @property {string} repository
+ * @property {string} default_branch  
  * @property {number} open_issues
  * @property {string} last_code_push
  * @property {string} last_repo_update
@@ -32,6 +33,7 @@ export async function getRepositories() {
       const inactive_days = daysSince(repo.pushed_at);
       return {
         repository: repo.name,
+        default_branch: repo.default_branch,
         open_issues: repo.open_issues_count,
         last_code_push: repo.pushed_at,
         last_repo_update: repo.updated_at,

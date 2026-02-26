@@ -62,42 +62,32 @@ async function main() {
   // 1. Fetch + clasificación de repos (sin I/O, sin network extra)
   const allRepos = await getRepositories();
 
-  // 2. Separar repos a auditar — repos STALE/ABANDONED no aportan valor en auditoría de ramas
-  const activeRepos = allRepos.filter(r => r.status === "ACTIVE");
-  const nonActiveRepos = allRepos.filter(r => r.status !== "ACTIVE");
-  console.log(`\n[AUDIT] Auditing ${activeRepos.length} ACTIVE repos (skipping ${nonActiveRepos.length} STALE/ABANDONED)\n`);
-
-  // 3. Auditoría con concurrencia controlada + checkpointing
-  //    Cada auditRepo retorna { ...repoRecord, branches: BranchRecord[] } (aggregate root)
+  // 2. Auditoría con concurrencia controlada + checkpointing.
+  //    Promise.all retorna AuditedRepo[] directamente — sin side effects laterales.
+  //    Esto garantiza que allAuditedRepos siempre tiene branches embebidas.
   const limit = pLimit(CONCURRENCY);
-  const auditedActive = [];
   let audited = 0;
 
-  await Promise.all(
+  const auditedActive = await Promise.all(
     allRepos.map(repo =>
       limit(async () => {
         const auditedRepo = await auditRepo(repo);
-        auditedActive.push(auditedRepo);
         audited++;
 
         if (audited % CHECKPOINT_INTERVAL === 0) {
-          saveCheckpoint(auditedActive);
+          saveCheckpoint(auditedActive.filter(Boolean));
         }
+
+        return auditedRepo;
       })
     )
   );
 
-  // 4. Unificar: repos auditados (con branches) + repos no-activos (branches vacías)
-  //    El JSON final contiene TODOS los repos de la org para visibilidad completa
-  // const allAuditedRepos = [
-  //   ...auditedActive,
-  //   ...nonActiveRepos.map(r => ({ ...r, branches: [] })),
-  // ];
-  const allAuditedRepos = [
-    ...allRepos,
-  ];
+  // 3. Unificar: repos auditados (branches embebidas).
+  //    El JSON contiene TODOS los repos de la org para visibilidad completa.
+  const allAuditedRepos = auditedActive;
 
-  // 5. Generar reportes — todos los reporters reciben el mismo array unificado
+  // 4. Generar reportes — todos los reporters reciben el mismo array unificado
   console.log("\n[REPORTS] Writing output files...");
   writeJsonReport(allAuditedRepos, OUTPUT_DIR);       // JSON jerárquico
   writeReposCsv(allAuditedRepos, OUTPUT_DIR);         // CSV plano de repos (branches strip internamente)
