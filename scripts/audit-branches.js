@@ -1,107 +1,104 @@
-import { Octokit } from "@octokit/rest";
-import { stringify } from "csv-stringify/sync";
+/**
+ * GitHub Organization Branch Auditor
+ * ------------------------------------
+ * Entrypoint principal. Orquesta:
+ *   1. Fetch y clasificación de todos los repos de la org
+ *   2. Auditoría de ramas de repos ACTIVE (con concurrencia controlada)
+ *   3. Checkpointing cada CHECKPOINT_INTERVAL repos (para workflows con timeout)
+ *   4. Generación de reportes JSON, repos.csv y branches.csv
+ */
+
 import fs from "fs";
+import pLimit from "p-limit";
+import { getRepositories } from "./lib/repos.js";
+import { auditRepo } from "./lib/branches.js";
+import { writeJsonReport } from "./lib/reporters/json.js";
+import { writeReposCsv, writeBranchesCsv } from "./lib/reporters/csv.js";
+
+// ── Configuración ─────────────────────────────────────────────────────────────
 
 const ORG = process.env.ORG;
-const TOKEN = process.env.GH_TOKEN;
+if (!ORG) { console.error("[ERROR] ORG env var is missing"); process.exit(1); }
+if (!process.env.GH_TOKEN) { console.error("[ERROR] GH_TOKEN env var is missing"); process.exit(1); }
 
-if (!ORG || !TOKEN) {
-  console.error("ORG or GITHUB_TOKEN missing");
-  process.exit(1);
-}
+/** Repos auditados en paralelo simultáneamente. Ajustar según el rate-limit disponible. */
+const CONCURRENCY = parseInt(process.env.AUDIT_CONCURRENCY ?? "5", 10);
 
-const octokit = new Octokit({ auth: TOKEN });
+/** Guardar checkpoint cada N repos auditados. */
+const CHECKPOINT_INTERVAL = parseInt(process.env.CHECKPOINT_INTERVAL ?? "25", 10);
 
-if (!fs.existsSync("output")) {
-  fs.mkdirSync("output");
-}
+const OUTPUT_DIR = "output";
 
-async function getRepositories() {
-  console.log(`Fetching repositories for organization: ${ORG}`);
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
-  const repos = await octokit.paginate(
-    octokit.rest.repos.listForOrg,
-    { org: ORG, type: "all", per_page: 100 }
-  );
-
-  return repos
-    .filter(repo => !repo.archived && !repo.disabled)
-    .map(repo => {
-      const inactiveDays = daysSince(repo.pushed_at);
-      return {
-        repository: repo.name,
-        visibility: repo.visibility,
-        private: repo.private,
-        archived: repo.archived,
-        default_branch: repo.default_branch,
-        main_language: repo.language,
-        size_kb: repo.size,
-        open_issues: repo.open_issues_count,
-        last_code_push: repo.pushed_at,
-        last_repo_update: repo.updated_at,
-        inactiveDays: inactiveDays,
-        status:
-          inactiveDays < 30 ? "ACTIVE" :
-            inactiveDays < 90 ? "STALE" :
-              "ABANDONED"
-      }
-    });
-
-}
-
-function daysSince(dateString) {
-  const now = new Date();
-  const past = new Date(dateString);
-  return Math.floor((now - past) / (1000 * 60 * 60 * 24));
-}
-
-async function main() {
-  try {
-    const repos = await getRepositories();
-
-    console.log(`Fetched ${repos.length} repositories`);
-
-    fs.writeFileSync(
-      "output/repos.json",
-      JSON.stringify(repos, null, 2)
-    );
-
-    console.log("Report generated successfully");
-
-    const csv = stringify(repos, {
-      header: true,
-      columns: {
-        repository: "Repository",
-        visibility: "Visibility",
-        private: "Private",
-        archived: "Archived",
-        default_branch: "Default Branch",
-        main_language: "Main Language",
-        size_kb: "Size (KB)",
-        open_issues: "Open Issues",
-        last_code_push: "Last Code Push",
-        last_repo_update: "Last Repo Update",
-        inactiveDays: "Inactive Days",
-        status: "Status"
-      }
-    });
-
-    fs.writeFileSync("output/repos.csv", csv);
-
-    console.log("CSV report generated");
-
-
-  } catch (error) {
-    console.error("GitHub API error:");
-
-    if (error.response) {
-      console.error(error.response.status, error.response.data);
-    } else {
-      console.error(error);
-    }
-
-    process.exit(1);
+function ensureOutputDir() {
+  if (!fs.existsSync(OUTPUT_DIR)) {
+    fs.mkdirSync(OUTPUT_DIR, { recursive: true });
   }
 }
 
-main();
+/**
+ * Guarda el estado parcial de repos auditados para recuperación ante timeout.
+ *
+ * @param {Array<import("./lib/repos.js").RepoRecord & { branches: any[] }>} repos
+ */
+function saveCheckpoint(repos) {
+  const filePath = `${OUTPUT_DIR}/checkpoint_repos.json`;
+  fs.writeFileSync(filePath, JSON.stringify(repos, null, 2), "utf-8");
+  const total = repos.reduce((n, r) => n + r.branches.length, 0);
+  console.log(`[CHECKPOINT] Saved ${repos.length} repos, ${total} branches → ${filePath}`);
+}
+
+// ── Main ──────────────────────────────────────────────────────────────────────
+
+async function main() {
+  console.log("=".repeat(60));
+  console.log(`GitHub Org Auditor — ${new Date().toISOString()}`);
+  console.log(`Org: ${ORG} | Concurrency: ${CONCURRENCY} | Checkpoint every: ${CHECKPOINT_INTERVAL}`);
+  console.log("=".repeat(60));
+
+  ensureOutputDir();
+
+  const allRepos = await getRepositories();
+
+  const limit = pLimit(CONCURRENCY);
+  let audited = 0;
+
+  const auditedActive = await Promise.all(
+    allRepos.map(repo =>
+      limit(async () => {
+        const auditedRepo = await auditRepo(repo);
+        audited++;
+
+        if (audited % CHECKPOINT_INTERVAL === 0) {
+          saveCheckpoint(auditedActive.filter(Boolean));
+        }
+
+        return auditedRepo;
+      })
+    )
+  );
+
+  const allAuditedRepos = auditedActive;
+
+  console.log("\n[REPORTS] Writing output files...");
+  writeJsonReport(allAuditedRepos, OUTPUT_DIR);       // JSON jerárquico
+  writeReposCsv(allAuditedRepos, OUTPUT_DIR);         // CSV plano de repos (branches strip internamente)
+  writeBranchesCsv(allAuditedRepos, OUTPUT_DIR);      // CSV plano de branches (flatMap internamente)
+
+  const checkpointPath = `${OUTPUT_DIR}/checkpoint_repos.json`;
+  if (fs.existsSync(checkpointPath)) fs.unlinkSync(checkpointPath);
+
+  console.log("\n✅ Audit completed successfully.");
+  console.log("=".repeat(60));
+}
+
+main().catch(error => {
+  console.error("\n[FATAL]", error.message);
+  if (error.status) {
+    console.error(`HTTP ${error.status}:`, error.response?.data ?? "");
+  } else {
+    console.error(error.stack);
+  }
+  process.exit(1);
+});
