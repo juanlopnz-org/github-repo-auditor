@@ -1,19 +1,29 @@
-name: Auditoria de Repositorios
+name: Auditoría de Repositorios
 
 on:
   workflow_dispatch:
+    inputs:
+      concurrency:
+        description: "Repos auditados en paralelo (default: 5)"
+        required: false
+        default: "5"
   schedule:
-    - cron: "0 11 * * 1" # Lunes 6:00am Colombia (11:00 UTC) - m h dm m dw
+    - cron: "0 11 * * 1" # Lunes 6:00am Colombia (11:00 UTC)
 
 env:
   ORG: juanlopnz-org
-  INACTIVITY_DAYS: 5
-  INACTIVITY_HOURS: 10
+  # Días sin actividad para clasificar una rama como RISK (RISK = INACTIVITY_DAYS * 2)
+  INACTIVITY_DAYS: 30
+  # Repos auditados en paralelo simultáneamente
+  AUDIT_CONCURRENCY: ${{ inputs.concurrency || '5' }}
 
 jobs:
   audit:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 60  # suficiente para orgs de hasta 300 repos con concurrencia
+
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout repo
@@ -33,9 +43,14 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           ORG: ${{ env.ORG }}
+          INACTIVITY_DAYS: ${{ env.INACTIVITY_DAYS }}
+          AUDIT_CONCURRENCY: ${{ env.AUDIT_CONCURRENCY }}
 
-      - name: Upload report
+      # Subir artefactos SIEMPRE, incluso si el job falla (para recuperar checkpoints)
+      - name: Upload audit reports
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: audit-report
+          name: audit-report-${{ github.run_id }}
           path: output/
+          retention-days: 30
