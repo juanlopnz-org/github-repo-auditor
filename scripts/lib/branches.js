@@ -112,16 +112,17 @@ export async function auditRepo(repoRecord) {
   console.log(`  [BRANCHES] ${repo}: ${nonBaseBranches.length} branches to audit`);
 
 
-  const results = [{
-    branch: base,
-    last_commit: baseBranch?.commit?.sha ?? null,
-    last_author: baseBranch?.commit?.author?.name ?? null,
-    inactive_days: daysSince(baseBranch?.commit?.author?.date ?? null),
-    status: branchStatus(daysSince(baseBranch?.commit?.author?.date ?? null)),
-    ahead_by: 0,
-    behind_by: 0,
-    compare_status: "equal",
-  }];
+  // const results = [{
+  //   branch: base,
+  //   last_commit: baseBranch?.commit?.sha ?? null,
+  //   last_author: baseBranch?.commit?.author?.name ?? null,
+  //   inactive_days: daysSince(baseBranch?.commit?.author?.date ?? null),
+  //   status: branchStatus(daysSince(baseBranch?.commit?.author?.date ?? null)),
+  //   ahead_by: 0,
+  //   behind_by: 0,
+  //   compare_status: "equal",
+  // }];
+  const results = [];
 
   for (const b of nonBaseBranches) {
     let headCommit = { date: null, author: null };
