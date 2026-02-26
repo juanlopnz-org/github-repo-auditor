@@ -6,12 +6,6 @@ const ORG = process.env.ORG;
 /**
  * @typedef {Object} RepoRecord
  * @property {string} repository
- * @property {string} visibility
- * @property {boolean} private
- * @property {boolean} archived
- * @property {string} default_branch
- * @property {string|null} main_language
- * @property {number} size_kb
  * @property {number} open_issues
  * @property {string} last_code_push
  * @property {string} last_repo_update
@@ -38,12 +32,6 @@ export async function getRepositories() {
       const inactive_days = daysSince(repo.pushed_at);
       return {
         repository: repo.name,
-        visibility: repo.visibility,
-        private: repo.private,
-        archived: repo.archived,
-        default_branch: repo.default_branch,
-        main_language: repo.language ?? null,
-        size_kb: repo.size,
         open_issues: repo.open_issues_count,
         last_code_push: repo.pushed_at,
         last_repo_update: repo.updated_at,

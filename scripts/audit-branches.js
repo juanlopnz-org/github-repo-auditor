@@ -74,7 +74,7 @@ async function main() {
   let audited = 0;
 
   await Promise.all(
-    activeRepos.map(repo =>
+    allRepos.map(repo =>
       limit(async () => {
         const auditedRepo = await auditRepo(repo);
         auditedActive.push(auditedRepo);
@@ -89,9 +89,12 @@ async function main() {
 
   // 4. Unificar: repos auditados (con branches) + repos no-activos (branches vacías)
   //    El JSON final contiene TODOS los repos de la org para visibilidad completa
+  // const allAuditedRepos = [
+  //   ...auditedActive,
+  //   ...nonActiveRepos.map(r => ({ ...r, branches: [] })),
+  // ];
   const allAuditedRepos = [
-    ...auditedActive,
-    ...nonActiveRepos.map(r => ({ ...r, branches: [] })),
+    ...allRepos,
   ];
 
   const totalBranches = allAuditedRepos.reduce((n, r) => n + r.branches.length, 0);

@@ -5,7 +5,6 @@ const ORG = process.env.ORG;
 
 /**
  * @typedef {Object} BranchRecord
- * @property {string} repository
  * @property {string} branch
  * @property {string|null} last_commit
  * @property {string|null} last_author
@@ -109,9 +108,20 @@ export async function auditRepo(repoRecord) {
   }
 
   const nonBaseBranches = branches.filter(b => b.name !== base);
+  const baseBranch = branches.find(b => b.name === base);
   console.log(`  [BRANCHES] ${repo}: ${nonBaseBranches.length} branches to audit`);
 
-  const results = [];
+
+  const results = [{
+    branch: base,
+    last_commit: baseBranch?.commit?.sha ?? null,
+    last_author: baseBranch?.commit?.author?.name ?? null,
+    inactive_days: daysSince(baseBranch?.commit?.author?.date ?? null),
+    status: branchStatus(daysSince(baseBranch?.commit?.author?.date ?? null)),
+    ahead_by: 0,
+    behind_by: 0,
+    compare_status: "equal",
+  }];
 
   for (const b of nonBaseBranches) {
     let headCommit = { date: null, author: null };
@@ -126,7 +136,6 @@ export async function auditRepo(repoRecord) {
     const compare = await compareWithBase(repo, base, b.name);
 
     results.push({
-      repository: repo,
       branch: b.name,
       last_commit: headCommit.date,
       last_author: headCommit.author,
