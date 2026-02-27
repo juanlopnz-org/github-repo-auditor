@@ -48,7 +48,6 @@ jobs:
           INACTIVITY_DAYS: ${{ env.INACTIVITY_DAYS }}
           AUDIT_CONCURRENCY: ${{ env.AUDIT_CONCURRENCY }}
 
-      # Subir artefactos SIEMPRE, incluso si el job falla (para recuperar checkpoints)
       - name: Upload audit reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -56,3 +55,22 @@ jobs:
           name: audit-report-${{ github.run_id }}
           path: output/
           retention-days: 30
+
+      - name: Copy report to dashboard
+        if: success()
+        run: |
+          cp output/report.json dashboard/report.json
+
+      - name: Setup Pages
+        if: success()
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages Artifact
+        if: success()
+        uses: actions/upload-pages-artifact@v3
+
+        with:
+          path: dashboard
+      - name: Deploy to GitHub Pages
+        if: success()
+        uses: actions/deploy-pages@v4
