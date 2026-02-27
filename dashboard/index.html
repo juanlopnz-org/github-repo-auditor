@@ -1,12 +1,10 @@
 <!DOCTYPE html>
-
 <html lang="es">
 
 <head>
   <meta charset="UTF-8">
-  <title>Branch Governance Dashboard</title>
+  <title>Gobernanza de Ramas</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
   <link rel="stylesheet" href="style.css">
 </head>
 
@@ -14,25 +12,25 @@
 
   <header class="header">
     <div class="header-left">
-      <h1>Branch Governance</h1>
-      <span class="subtitle">Auditoría de sincronización de repositorios</span>
+      <h1>Gobernanza de Ramas</h1>
+      <span class="subtitle">Auditoría automática de sincronización de repositorios</span>
     </div>
 
     <div class="header-right">
       <div class="kpi">
-        <span class="kpi-label">Repos</span>
+        <span class="kpi-label">Repositorios</span>
         <span id="totalRepos" class="kpi-value">-</span>
       </div>
+
       <div class="kpi">
-        <span class="kpi-label">Ramas</span>
+        <span class="kpi-label">Ramas totales</span>
         <span id="totalBranches" class="kpi-value">-</span>
       </div>
 
       <div class="kpi">
-        <span class="kpi-label">Última ejecución</span>
+        <span class="kpi-label">Última actualización</span>
         <span id="generatedAt" class="kpi-value small">-</span>
       </div>
-
     </div>
   </header>
 
@@ -44,18 +42,19 @@
     </section>
 
     <section class="repos">
-      <h2>Repositorios</h2>
-      <input type="text" id="searchInput" placeholder="Filtrar repositorio..." class="search">
+      <h2>Repositorios auditados</h2>
+
+      <input type="text" id="searchInput" placeholder="Buscar repositorio..." class="search">
 
       <div class="table-wrapper">
         <table id="reposTable">
           <thead>
             <tr>
               <th>Repositorio</th>
-              <th>Estado</th>
-              <th>Ramas</th>
-              <th>Behind</th>
-              <th>Diverged</th>
+              <th>Riesgo</th>
+              <th># Ramas</th>
+              <th>Días sin actividad</th>
+              <th>Rama principal</th>
             </tr>
           </thead>
           <tbody></tbody>
@@ -67,11 +66,10 @@
   </main>
 
   <footer class="footer">
-    Generado automáticamente por GitHub Branch Auditor
+    Reporte generado automáticamente por el Auditor de Repositorios
   </footer>
 
   <script src="app.js"></script>
-
 </body>
 
 </html>

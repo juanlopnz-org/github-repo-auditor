@@ -1,5 +1,36 @@
 let GLOBAL_DATA = null;
 
+function translateSummaryKey(key) {
+  const map = {
+    repos_active: "Repositorios activos",
+    repos_stale: "Repositorios desactualizados",
+    repos_abandoned: "Repositorios abandonados",
+    branches_active: "Ramas activas",
+    branches_risk: "Ramas en riesgo",
+    branches_inactive: "Ramas inactivas"
+  };
+  return map[key] || key;
+}
+
+function translateRepoStatus(status) {
+  const map = {
+    ACTIVE: "ACTIVO",
+    STALE: "DESACTUALIZADO",
+    ABANDONED: "ABANDONADO"
+  };
+  return map[status] || status;
+}
+
+function translateBranchComparison(compare) {
+  const map = {
+    equal: "SINCRONIZADA",
+    behind: "ATRASADA",
+    ahead: "ADELANTADA",
+    diverged: "DIVERGENTE"
+  };
+  return map[compare] || compare;
+}
+
 async function loadReport() {
   const res = await fetch("./report.json");
   const data = await res.json();
@@ -23,7 +54,7 @@ function buildSummary(summary) {
     const div = document.createElement("div");
     div.className = "card";
     div.innerHTML = `
-      <div class="title">${key.replaceAll("_", " ")}</div>
+      <div class="title">${translateSummaryKey(key)}</div>
       <div class="value">${value}</div>
     `;
     container.appendChild(div);
@@ -32,17 +63,21 @@ function buildSummary(summary) {
 
 function repoStatusBadge(status) {
   const s = status.toUpperCase();
-  if (s === "ACTIVE") return '<span class="badge ok">ACTIVE</span>';
-  if (s === "STALE") return '<span class="badge warn">STALE</span>';
-  return '<span class="badge danger">ABANDONED</span>';
+  const label = translateRepoStatus(s);
+
+  if (s === "ACTIVE") return `<span class="badge ok">${label}</span>`;
+  if (s === "STALE") return `<span class="badge warn">${label}</span>`;
+  return `<span class="badge danger">${label}</span>`;
 }
 
 function branchCompareBadge(compare) {
-  if (compare === "equal") return '<span class="badge ok">SYNC</span>';
-  if (compare === "behind") return '<span class="badge warn">BEHIND</span>';
-  if (compare === "ahead") return '<span class="badge warn">AHEAD</span>';
-  if (compare === "diverged") return '<span class="badge danger">DIVERGED</span>';
-  return compare;
+  const label = translateBranchComparison(compare);
+
+  if (compare === "equal") return `<span class="badge ok">${label}</span>`;
+  if (compare === "behind") return `<span class="badge warn">${label}</span>`;
+  if (compare === "ahead") return `<span class="badge warn">${label}</span>`;
+  if (compare === "diverged") return `<span class="badge danger">${label}</span>`;
+  return label;
 }
 
 function buildReposTable(repos) {
@@ -50,13 +85,35 @@ function buildReposTable(repos) {
   tbody.innerHTML = "";
 
   repos.forEach((repo, index) => {
+
+    // calcular riesgo del repositorio
+    let hasDiverged = false;
+    let hasBehind = false;
+
+    repo.branches.forEach(b => {
+      if (b.compare_status === "diverged") hasDiverged = true;
+      else if (b.compare_status === "behind") hasBehind = true;
+    });
+
+    let riskBadge = '<span class="badge ok">HEALTHY</span>';
+    let rowClass = "";
+
+    if (hasDiverged) {
+      riskBadge = '<span class="badge danger">INTEGRATION RISK</span>';
+      rowClass = "row-danger";
+    } else if (hasBehind) {
+      riskBadge = '<span class="badge warn">OUTDATED</span>';
+      rowClass = "row-warn";
+    }
+
     const tr = document.createElement("tr");
+    tr.className = rowClass;
 
     tr.innerHTML = `
       <td class="repo-link" data-index="${index}" style="cursor:pointer; color:#60a5fa;">
         ${repo.repository}
       </td>
-      <td>${repoStatusBadge(repo.status)}</td>
+      <td>${riskBadge}</td>
       <td>${repo.branches.length}</td>
       <td>${repo.inactive_days}</td>
       <td>${repo.default_branch}</td>
@@ -65,7 +122,6 @@ function buildReposTable(repos) {
     tbody.appendChild(tr);
   });
 
-  // click handler
   document.querySelectorAll(".repo-link").forEach(el => {
     el.addEventListener("click", e => {
       const index = e.target.dataset.index;
@@ -83,25 +139,25 @@ function showBranches(repo) {
   section.className = "branches";
 
   let html = `<h2>Ramas de ${repo.repository}</h2>
-  <div class="table-wrapper">
-  <table>
-  <thead>
-    <tr>
-      <th>Branch</th>
-      <th>Estado</th>
-      <th>Ahead</th>
-      <th>Behind</th>
-      <th>Comparación</th>
-      <th>Autor</th>
-    </tr>
-  </thead>
-  <tbody>`;
+    <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Rama</th>
+          <th>Estado</th>
+          <th>Adelantados</th>
+          <th>Atrasados</th>
+          <th>Sincronización</th>
+          <th>Autor</th>
+        </tr>
+      </thead>
+      <tbody>`;
 
   repo.branches.forEach(branch => {
     html += `
     <tr>
       <td>${branch.branch}</td>
-      <td>${branch.status}</td>
+      <td>${translateRepoStatus(branch.status)}</td>
       <td>${branch.ahead_by}</td>
       <td>${branch.behind_by}</td>
       <td>${branchCompareBadge(branch.compare_status)}</td>
