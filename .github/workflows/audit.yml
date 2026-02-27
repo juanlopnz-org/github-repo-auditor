@@ -20,10 +20,12 @@ env:
 jobs:
   audit:
     runs-on: ubuntu-latest
-    timeout-minutes: 60  # suficiente para orgs de hasta 300 repos con concurrencia
+    timeout-minutes: 60 # suficiente para orgs de hasta 300 repos con concurrencia
 
     permissions:
       contents: read
+      pages: write
+      id-token: write
 
     steps:
       - name: Checkout repo
