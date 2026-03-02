@@ -31,6 +31,15 @@ function translateBranchComparison(compare) {
   return map[compare] || compare;
 }
 
+function translateRiskLevel(risk) {
+  const map = {
+    HEALTHY: "SALUDABLE",
+    OUTDATED: "DESACTUALIZADO",
+    INTEGRATION_RISK: "RIESGO DE INTEGRACIÓN"
+  };
+  return map[risk] || risk;
+}
+
 async function loadReport() {
   const res = await fetch("./report.json");
   const data = await res.json();
@@ -95,16 +104,24 @@ function buildReposTable(repos) {
       else if (b.compare_status === "behind") hasBehind = true;
     });
 
-    let riskBadge = '<span class="badge ok">HEALTHY</span>';
+    let riskLevel = "HEALTHY";
     let rowClass = "";
 
     if (hasDiverged) {
-      riskBadge = '<span class="badge danger">INTEGRATION RISK</span>';
+      riskLevel = "INTEGRATION_RISK";
       rowClass = "row-danger";
     } else if (hasBehind) {
-      riskBadge = '<span class="badge warn">OUTDATED</span>';
+      riskLevel = "OUTDATED";
       rowClass = "row-warn";
     }
+
+    const riskLabel = translateRiskLevel(riskLevel);
+
+    let riskBadgeClass = "ok";
+    if (riskLevel === "INTEGRATION_RISK") riskBadgeClass = "danger";
+    else if (riskLevel === "OUTDATED") riskBadgeClass = "warn";
+
+    const riskBadge = `<span class="badge ${riskBadgeClass}">${riskLabel}</span>`;
 
     const tr = document.createElement("tr");
     tr.className = rowClass;
