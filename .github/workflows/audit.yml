@@ -73,12 +73,10 @@ jobs:
       - name: Deploy to GitHub Pages
         if: success()
         uses: actions/deploy-pages@v4
-      - name: Generate HTML report
-        run: node scripts/generate-html-report.js
-      - name: Upload report to SharePoint
-        env:
-          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-          SHAREPOINT_SITE_NAME: ${{ env.SHAREPOINT_SITE_NAME }}
-        run: node scripts/upload-to-sharepoint.js
+      # - name: Upload report to SharePoint
+      #   env:
+      #     AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      #     AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      #     AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+      #     SHAREPOINT_SITE_NAME: ${{ env.SHAREPOINT_SITE_NAME }}
+      #   run: node scripts/upload-to-sharepoint.js

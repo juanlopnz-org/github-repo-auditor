@@ -86,7 +86,7 @@ async function main() {
   writeJsonReport(allAuditedRepos, OUTPUT_DIR);       // JSON jerárquico
   writeReposCsv(allAuditedRepos, OUTPUT_DIR);         // CSV plano de repos (branches strip internamente)
   writeBranchesCsv(allAuditedRepos, OUTPUT_DIR);      // CSV plano de branches (flatMap internamente)
-  // writeHtmlReport(allAuditedRepos, OUTPUT_DIR);       // HTML estático autocontenido
+  writeHtmlReport(OUTPUT_DIR);       // HTML estático autocontenido
 
   const checkpointPath = `${OUTPUT_DIR}/checkpoint_repos.json`;
   if (fs.existsSync(checkpointPath)) fs.unlinkSync(checkpointPath);
