@@ -14,6 +14,7 @@ import { getRepositories } from "./lib/repos.js";
 import { auditRepo } from "./lib/branches.js";
 import { writeJsonReport } from "./lib/reporters/json.js";
 import { writeReposCsv, writeBranchesCsv } from "./lib/reporters/csv.js";
+import { writeHtmlReport } from "./lib/reporters/html.js";
 
 // ── Configuración ─────────────────────────────────────────────────────────────
 
@@ -85,6 +86,7 @@ async function main() {
   writeJsonReport(allAuditedRepos, OUTPUT_DIR);       // JSON jerárquico
   writeReposCsv(allAuditedRepos, OUTPUT_DIR);         // CSV plano de repos (branches strip internamente)
   writeBranchesCsv(allAuditedRepos, OUTPUT_DIR);      // CSV plano de branches (flatMap internamente)
+  // writeHtmlReport(allAuditedRepos, OUTPUT_DIR);       // HTML estático autocontenido
 
   const checkpointPath = `${OUTPUT_DIR}/checkpoint_repos.json`;
   if (fs.existsSync(checkpointPath)) fs.unlinkSync(checkpointPath);

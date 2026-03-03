@@ -40,12 +40,31 @@ function translateRiskLevel(risk) {
   return map[risk] || risk;
 }
 
+// async function loadReport() {
+//   const res = await fetch("./report.json");
+//   const data = await res.json();
+//   GLOBAL_DATA = data;
+
+//   // KPIs
+//   document.getElementById("totalRepos").textContent = data.total_repos;
+//   document.getElementById("totalBranches").textContent = data.total_branches;
+//   document.getElementById("generatedAt").textContent =
+//     new Date(data.generated_at).toLocaleString();
+
+//   buildSummary(data.summary);
+//   buildReposTable(data.repos);
+// }
+
 async function loadReport() {
-  const res = await fetch("./report.json");
-  const data = await res.json();
+  let data = window.__AUDIT_DATA__;
+
+  if (!data) {
+    const res = await fetch("./report.json");
+    data = await res.json();
+  }
+
   GLOBAL_DATA = data;
 
-  // KPIs
   document.getElementById("totalRepos").textContent = data.total_repos;
   document.getElementById("totalBranches").textContent = data.total_branches;
   document.getElementById("generatedAt").textContent =

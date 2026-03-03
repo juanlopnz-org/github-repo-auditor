@@ -12,15 +12,14 @@ on:
 
 env:
   ORG: juanlopnz-org
-  # Días sin actividad para clasificar una rama como RISK (RISK = INACTIVITY_DAYS * 2)
   INACTIVITY_DAYS: 30
-  # Repos auditados en paralelo simultáneamente
   AUDIT_CONCURRENCY: ${{ inputs.concurrency || '5' }}
+  SHAREPOINT_SITE_NAME: AuditReports
 
 jobs:
   audit:
     runs-on: ubuntu-latest
-    timeout-minutes: 60 # suficiente para orgs de hasta 300 repos con concurrencia
+    timeout-minutes: 60
 
     permissions:
       contents: read
@@ -74,3 +73,12 @@ jobs:
       - name: Deploy to GitHub Pages
         if: success()
         uses: actions/deploy-pages@v4
+      - name: Generate HTML report
+        run: node scripts/generate-html-report.js
+      - name: Upload report to SharePoint
+        env:
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          SHAREPOINT_SITE_NAME: ${{ secrets.SHAREPOINT_SITE_NAME }}
+        run: node scripts/upload-to-sharepoint.js
