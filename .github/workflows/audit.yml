@@ -9,6 +9,8 @@ on:
         default: "5"
   schedule:
     - cron: "0 11 * * 1" # Lunes 6:00am Colombia (11:00 UTC)
+  issues:
+    types: [opened]
 
 env:
   ORG: juanlopnz-org
@@ -18,6 +20,7 @@ env:
 
 jobs:
   audit:
+    if: contains(github.event.issue.title, 'run-audit')
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
@@ -80,22 +83,27 @@ jobs:
       #     AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
       #     SHAREPOINT_SITE_NAME: ${{ env.SHAREPOINT_SITE_NAME }}
       #   run: node scripts/upload-to-sharepoint.js
-      - name: Commit report to reports branch
-        run: |
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
+      # - name: Commit report to reports branch
+      #   run: |
+      #     git config user.name "github-actions"
+      #     git config user.email "github-actions@github.com"
 
-          # Traer rama reports
-          git fetch origin reports
-          git checkout reports
+      #     # Traer rama reports
+      #     git fetch origin reports
+      #     git checkout reports
 
-          # Crear carpeta si no existe
-          mkdir -p latest
+      #     # Crear carpeta si no existe
+      #     mkdir -p latest
 
-          # Copiar reporte generado
-          cp output/report.html latest/report.html
-          cp output/report.json latest/report.json
+      #     # Copiar reporte generado
+      #     cp output/report.html latest/report.html
+      #     cp output/report.json latest/report.json
 
-          git add latest/
-          git commit -m "Update audit report - $(date +'%Y-%m-%d %H:%M:%S')" || echo "No changes to commit"
-          git push origin reports
+      #     git add latest/
+      #     git commit -m "Update audit report - $(date +'%Y-%m-%d %H:%M:%S')" || echo "No changes to commit"
+      #     git push origin reports
+      - name: Close trigger issue
+        if: github.event_name == 'issues'
+        uses: peter-evans/close-issue@v3
+        with:
+          issue-number: ${{ github.event.issue.number }}

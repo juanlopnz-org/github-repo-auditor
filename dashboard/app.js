@@ -1,4 +1,6 @@
 let GLOBAL_DATA = null;
+const owner = process.env.ORG || "juanlopnz-org";
+const repo = "github-repo-auditor";
 
 function translateSummaryKey(key) {
   const map = {
@@ -114,7 +116,6 @@ function buildReposTable(repos) {
 
   repos.forEach((repo, index) => {
 
-    // calcular riesgo del repositorio
     let hasDiverged = false;
     let hasBehind = false;
 
@@ -207,7 +208,38 @@ function showBranches(repo) {
   document.querySelector(".container").appendChild(section);
 }
 
-// filtro
+async function runAudit() {
+  const issueUrl = `https://github.com/${owner}/${repo}/issues/new?title=run-audit&body=Triggered%20from%20dashboard`;
+
+  window.open(issueUrl, "_blank");
+}
+
+let lastStatus = "";
+
+async function checkWorkflow() {
+  const url =
+    `https://api.github.com/repos/${owner}/${repo}/actions/runs?per_page=1`;
+
+  const res = await fetch(url);
+  const data = await res.json();
+
+  const run = data.workflow_runs[0];
+
+  const status = document.getElementById("workflowStatus");
+
+  if (run.status !== "completed") {
+    status.innerText = "Workflow running 🔄";
+  } else {
+    status.innerText = "Workflow completed ✅";
+    if (lastStatus !== "completed") {
+      location.reload();
+    }
+  }
+  lastStatus = run.status;
+}
+
+setInterval(checkWorkflow, 10000);
+
 document.getElementById("searchInput").addEventListener("input", e => {
   const text = e.target.value.toLowerCase();
   document.querySelectorAll("#reposTable tbody tr").forEach(row => {
@@ -217,5 +249,9 @@ document.getElementById("searchInput").addEventListener("input", e => {
         : "none";
   });
 });
+
+document
+  .getElementById("runAuditBtn")
+  .addEventListener("click", runAudit);
 
 loadReport();
