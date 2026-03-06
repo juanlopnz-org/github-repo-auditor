@@ -1,6 +1,4 @@
 let GLOBAL_DATA = null;
-const owner = "juanlopnz-org";
-const repo = "github-repo-auditor";
 
 function translateSummaryKey(key) {
   const map = {
@@ -41,21 +39,6 @@ function translateRiskLevel(risk) {
   };
   return map[risk] || risk;
 }
-
-// async function loadReport() {
-//   const res = await fetch("./report.json");
-//   const data = await res.json();
-//   GLOBAL_DATA = data;
-
-//   // KPIs
-//   document.getElementById("totalRepos").textContent = data.total_repos;
-//   document.getElementById("totalBranches").textContent = data.total_branches;
-//   document.getElementById("generatedAt").textContent =
-//     new Date(data.generated_at).toLocaleString();
-
-//   buildSummary(data.summary);
-//   buildReposTable(data.repos);
-// }
 
 async function loadReport() {
   let data = window.__AUDIT_DATA__;
@@ -214,32 +197,6 @@ async function runAudit() {
   window.open(issueUrl, "_blank");
 }
 
-let lastStatus = "";
-
-async function checkWorkflow() {
-  const url =
-    `https://api.github.com/repos/${owner}/${repo}/actions/runs?per_page=1`;
-
-  const res = await fetch(url);
-  const data = await res.json();
-
-  const run = data.workflow_runs[0];
-
-  const status = document.getElementById("workflowStatus");
-
-  if (run.status !== "completed") {
-    status.innerText = "Workflow running 🔄";
-  } else {
-    status.innerText = "Workflow completed ✅";
-    if (lastStatus !== "completed") {
-      location.reload();
-    }
-  }
-  lastStatus = run.status;
-}
-
-setInterval(checkWorkflow, 10000);
-
 document.getElementById("searchInput").addEventListener("input", e => {
   const text = e.target.value.toLowerCase();
   document.querySelectorAll("#reposTable tbody tr").forEach(row => {
@@ -249,9 +206,5 @@ document.getElementById("searchInput").addEventListener("input", e => {
         : "none";
   });
 });
-
-document
-  .getElementById("runAuditBtn")
-  .addEventListener("click", runAudit);
 
 loadReport();
