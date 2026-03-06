@@ -1,5 +1,5 @@
 let GLOBAL_DATA = null;
-const owner = process.env.ORG || "juanlopnz-org";
+const owner = "juanlopnz-org";
 const repo = "github-repo-auditor";
 
 function translateSummaryKey(key) {
