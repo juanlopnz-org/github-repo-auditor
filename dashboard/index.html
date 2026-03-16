@@ -49,11 +49,11 @@
         <table id="reposTable">
           <thead>
             <tr>
-              <th>Repositorio</th>
+              <th onclick="sortRepos('repository')" style="cursor:pointer">Repositorio</th>
               <th>Riesgo</th>
-              <th># Ramas</th>
-              <th>Días sin actividad</th>
-              <th>Rama principal</th>
+              <th onclick="sortRepos('branches')" style="cursor:pointer"># Ramas</th>
+              <th onclick="sortRepos('inactive_days')" style="cursor:pointer">Días sin actividad</th>
+              <th onclick="sortRepos('default_branch')" style="cursor:pointer">Rama principal</th>
             </tr>
           </thead>
           <tbody></tbody>

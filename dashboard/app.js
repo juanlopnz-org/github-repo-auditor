@@ -1,5 +1,16 @@
 let GLOBAL_DATA = null;
 
+let repos = [];
+let filteredRepos = [];
+
+let currentPage = 1;
+let rowsPerPage = 10;
+
+let selectedRepo = null;
+
+let sortColumn = null;
+let sortDirection = "asc";
+
 function translateSummaryKey(key) {
   const map = {
     repos_active: "Repositorios activos",
@@ -56,7 +67,10 @@ async function loadReport() {
     new Date(data.generated_at).toLocaleString();
 
   buildSummary(data.summary);
-  buildReposTable(data.repos);
+
+  repos = data.repos;
+  filteredRepos = [...repos];
+  renderReposTable();
 }
 
 function buildSummary(summary) {
@@ -93,11 +107,29 @@ function branchCompareBadge(compare) {
   return label;
 }
 
-function buildReposTable(repos) {
+function selectRepo(repo) {
+
+  if (selectedRepo && selectedRepo.repository === repo.repository) return;
+
+  selectedRepo = repo;
+
+  const existing = document.getElementById("branchesSection");
+  if (existing) existing.remove();
+
+  showBranches(repo);
+}
+
+function renderReposTable() {
+
   const tbody = document.querySelector("#reposTable tbody");
   tbody.innerHTML = "";
 
-  repos.forEach((repo, index) => {
+  const start = (currentPage - 1) * rowsPerPage;
+  const end = start + rowsPerPage;
+
+  const pageRepos = filteredRepos.slice(start, end);
+
+  pageRepos.forEach((repo, index) => {
 
     let hasDiverged = false;
     let hasBehind = false;
@@ -130,7 +162,7 @@ function buildReposTable(repos) {
     tr.className = rowClass;
 
     tr.innerHTML = `
-      <td class="repo-link" data-index="${index}" style="cursor:pointer; color:#60a5fa;">
+      <td class="repo-link" data-index="${start + index}" style="cursor:pointer; color:#60a5fa;">
         ${repo.repository}
       </td>
       <td>${riskBadge}</td>
@@ -140,14 +172,50 @@ function buildReposTable(repos) {
     `;
 
     tbody.appendChild(tr);
+
   });
 
   document.querySelectorAll(".repo-link").forEach(el => {
     el.addEventListener("click", e => {
       const index = e.target.dataset.index;
-      showBranches(GLOBAL_DATA.repos[index]);
+      selectRepo(filteredRepos[index]);
     });
   });
+
+  updatePagination();
+}
+
+function updatePagination() {
+
+  const totalPages = Math.ceil(filteredRepos.length / rowsPerPage);
+
+  let pagination = document.getElementById("pagination");
+
+  if (!pagination) {
+
+    pagination = document.createElement("div");
+    pagination.id = "pagination";
+    pagination.className = "pagination";
+
+    document.querySelector(".repos").appendChild(pagination);
+
+  }
+
+  pagination.innerHTML = `
+    <button onclick="prevPage()" ${currentPage === 1 ? "disabled" : ""}>Anterior</button>
+    <span>Página ${currentPage} / ${totalPages} (${filteredRepos.length} repos)</span>
+    <button onclick="nextPage()" ${currentPage === totalPages ? "disabled" : ""}>Siguiente</button>
+  `;
+}
+
+function nextPage() {
+  currentPage++;
+  renderReposTable();
+}
+
+function prevPage() {
+  currentPage--;
+  renderReposTable();
 }
 
 function showBranches(repo) {
@@ -191,20 +259,46 @@ function showBranches(repo) {
   document.querySelector(".container").appendChild(section);
 }
 
-async function runAudit() {
-  const issueUrl = `https://github.com/${owner}/${repo}/issues/new?title=run-audit&body=Triggered%20from%20dashboard`;
+function sortRepos(column) {
 
-  window.open(issueUrl, "_blank");
+  if (sortColumn === column) {
+    sortDirection = sortDirection === "asc" ? "desc" : "asc";
+  } else {
+    sortColumn = column;
+    sortDirection = "asc";
+  }
+
+  filteredRepos.sort((a, b) => {
+
+    let valA = a[column];
+    let valB = b[column];
+
+    if (typeof valA === "string") valA = valA.toLowerCase();
+    if (typeof valB === "string") valB = valB.toLowerCase();
+
+    if (valA < valB) return sortDirection === "asc" ? -1 : 1;
+    if (valA > valB) return sortDirection === "asc" ? 1 : -1;
+
+    return 0;
+
+  });
+
+  renderReposTable();
+
 }
 
 document.getElementById("searchInput").addEventListener("input", e => {
+
   const text = e.target.value.toLowerCase();
-  document.querySelectorAll("#reposTable tbody tr").forEach(row => {
-    row.style.display =
-      row.children[0].textContent.toLowerCase().includes(text)
-        ? ""
-        : "none";
-  });
+
+  filteredRepos = repos.filter(repo =>
+    repo.repository.toLowerCase().includes(text)
+  );
+
+  currentPage = 1;
+
+  renderReposTable();
+
 });
 
 loadReport();
