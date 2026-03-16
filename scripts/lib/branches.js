@@ -87,8 +87,8 @@ export async function auditRepo(repoRecord) {
   for (const branch of branches) {
 
     const sha = branch.commit.sha;
-
-    const commit = await getCommit(repo, sha);
+    const commitDate = branch.commit?.commit?.author?.date ?? null;
+    const commitAuthor = branch.commit?.commit?.author?.name ?? null;
 
     const inactive_days = daysSince(commit.date);
     const status = branchStatus(inactive_days);
@@ -105,8 +105,8 @@ export async function auditRepo(repoRecord) {
 
     results.push({
       branch: branch.name,
-      last_commit: commit.date,
-      last_author: commit.author,
+      last_commit: commitDate,
+      last_author: commitAuthor,
       inactive_days,
       status,
       ahead_by: compare.ahead_by,
