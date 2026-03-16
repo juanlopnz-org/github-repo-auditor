@@ -4,22 +4,22 @@ on:
   workflow_dispatch:
     inputs:
       concurrency:
-        description: "Repos auditados en paralelo (default: 5)"
+        description: "Repos auditados en paralelo (default: 3)"
         required: false
-        default: "5"
+        default: "3"
   schedule:
     - cron: "0 11 * * 1" # Lunes 6:00am Colombia (11:00 UTC)
 
 env:
   ORG: juanlopnz-org
   INACTIVITY_DAYS: 30
-  AUDIT_CONCURRENCY: ${{ inputs.concurrency || '5' }}
+  AUDIT_CONCURRENCY: ${{ inputs.concurrency || '3' }}
   SHAREPOINT_SITE_NAME: AuditReports
 
 jobs:
   audit:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 30
 
     permissions:
       contents: write
@@ -73,10 +73,3 @@ jobs:
       - name: Deploy to GitHub Pages
         if: success()
         uses: actions/deploy-pages@v4
-      # - name: Upload report to SharePoint
-      #   env:
-      #     AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-      #     AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-      #     AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-      #     SHAREPOINT_SITE_NAME: ${{ env.SHAREPOINT_SITE_NAME }}
-      #   run: node scripts/upload-to-sharepoint.js

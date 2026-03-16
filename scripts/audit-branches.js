@@ -22,7 +22,7 @@ if (!ORG) { console.error("[ERROR] ORG env var is missing"); process.exit(1); }
 if (!process.env.GH_TOKEN) { console.error("[ERROR] GH_TOKEN env var is missing"); process.exit(1); }
 
 /** Repos auditados en paralelo simultáneamente. Ajustar según el rate-limit disponible. */
-const CONCURRENCY = parseInt(process.env.AUDIT_CONCURRENCY ?? "5", 10);
+const CONCURRENCY = parseInt(process.env.AUDIT_CONCURRENCY ?? "3", 10);
 
 /** Guardar checkpoint cada N repos auditados. */
 const CHECKPOINT_INTERVAL = parseInt(process.env.CHECKPOINT_INTERVAL ?? "25", 10);
