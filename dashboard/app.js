@@ -289,6 +289,9 @@ function sortRepos(column) {
 
 document.getElementById("searchInput").addEventListener("input", e => {
 
+  const existing = document.getElementById("branchesSection");
+  if (existing) existing.remove();
+
   const text = e.target.value.toLowerCase();
 
   filteredRepos = repos.filter(repo =>

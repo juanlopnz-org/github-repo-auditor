@@ -94,8 +94,8 @@ export async function auditRepo(repoRecord) {
     const status = branchStatus(inactive_days);
 
     let compare = {
-      ahead_by: null,
-      behind_by: null,
+      ahead_by: 0,
+      behind_by: 0,
       compare_status: "equal",
     };
 
