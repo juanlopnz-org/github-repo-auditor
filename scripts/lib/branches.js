@@ -96,14 +96,10 @@ export async function auditRepo(repoRecord) {
     let compare = {
       ahead_by: null,
       behind_by: null,
-      compare_status: "skipped",
+      compare_status: "equal",
     };
 
-    /**
-     * Solo comparar ramas activas o en riesgo.
-     * Las inactivas no necesitan comparación.
-     */
-    if (branch.name !== base && status !== "INACTIVE") {
+    if (branch.name !== base) {
       compare = await compareWithBase(repo, base, branch.name);
     }
 
