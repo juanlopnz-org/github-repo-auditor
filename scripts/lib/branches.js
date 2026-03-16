@@ -4,22 +4,7 @@ import { daysSince, branchStatus } from "./classifier.js";
 const ORG = process.env.ORG;
 
 /**
- * @typedef {Object} BranchRecord
- * @property {string} branch
- * @property {string|null} last_commit
- * @property {string|null} last_author
- * @property {number} inactive_days
- * @property {"ACTIVE"|"RISK"|"INACTIVE"} status
- * @property {number|null} ahead_by
- * @property {number|null} behind_by
- * @property {string} compare_status
- */
-
-/**
- * Lista todas las ramas de un repo (paginado).
- *
- * @param {string} repo
- * @returns {Promise<Array>}
+ * Lista todas las ramas de un repo.
  */
 async function getBranches(repo) {
   return octokit.paginate(
@@ -29,36 +14,29 @@ async function getBranches(repo) {
 }
 
 /**
- * Obtiene la info del HEAD commit de una rama usando getBranch,
- * que es 1 sola request y retorna el commit directamente.
- * Evita el listCommits redundante del código original.
- *
- * @param {string} repo
- * @param {string} branch
- * @returns {Promise<{ date: string|null, author: string|null, sha: string }>}
+ * Obtiene metadata del commit usando el SHA ya provisto por listBranches.
+ * Esto evita usar getBranch().
  */
-async function getHeadCommit(repo, branch) {
-  const { data } = await octokit.rest.repos.getBranch({
-    owner: ORG,
-    repo,
-    branch,
-  });
+async function getCommit(repo, sha) {
+  try {
+    const { data } = await octokit.rest.repos.getCommit({
+      owner: ORG,
+      repo,
+      ref: sha,
+    });
 
-  return {
-    sha: data.commit.sha,
-    date: data.commit.commit?.author?.date ?? null,
-    author: data.commit.commit?.author?.name ?? null,
-  };
+    return {
+      date: data.commit.author?.date ?? null,
+      author: data.commit.author?.name ?? null,
+    };
+  } catch (error) {
+    console.warn(`[WARN] getCommit failed ${repo}@${sha} — ${error.message}`);
+    return { date: null, author: null };
+  }
 }
 
 /**
- * Compara una rama contra la rama base.
- * Retorna null en ahead/behind si la comparación falla.
- *
- * @param {string} repo
- * @param {string} base
- * @param {string} head
- * @returns {Promise<{ ahead_by: number|null, behind_by: number|null, compare_status: string }>}
+ * Compara una rama contra la base.
  */
 async function compareWithBase(repo, base, head) {
   try {
@@ -76,9 +54,11 @@ async function compareWithBase(repo, base, head) {
     };
   } catch (error) {
     const status = error.status ?? "unknown";
+
     console.warn(
-      `[WARN] compareCommits failed for ${repo}:${head} vs ${base} — HTTP ${status}: ${error.message}`
+      `[WARN] compareCommits failed ${repo}:${head} vs ${base} — ${status}`
     );
+
     return {
       ahead_by: null,
       behind_by: null,
@@ -88,59 +68,51 @@ async function compareWithBase(repo, base, head) {
 }
 
 /**
- * Audita todas las ramas de un repositorio (excepto la rama base).
- * Las ramas se procesan en serie para evitar disparar demasiadas requests
- * concurrentes desde un único repo. La concurrencia entre repos es manejada
- * por el p-limit del entrypoint.
- *
- * @param {import("./repos.js").RepoRecord} repoRecord
- * @returns {Promise<BranchRecord[]>}
+ * Auditoría optimizada de ramas.
  */
 export async function auditRepo(repoRecord) {
   const { repository: repo, default_branch: base } = repoRecord;
 
   let branches;
+
   try {
     branches = await getBranches(repo);
   } catch (error) {
-    console.error(`[ERROR] getBranches failed for ${repo} — ${error.message}`);
-    return [];
+    console.error(`[ERROR] getBranches failed for ${repo}`);
+    return { ...repoRecord, branches: [] };
   }
 
-  const nonBaseBranches = branches.filter(b => b.name !== base);
-  const baseBranch = branches.find(b => b.name === base);
-  console.log(`  [BRANCHES] ${repo}: ${nonBaseBranches.length} branches to audit`);
+  const results = [];
 
+  for (const branch of branches) {
 
-  const results = [{
-    branch: base,
-    last_commit: baseBranch?.commit?.sha ?? null,
-    last_author: baseBranch?.commit?.author?.name ?? null,
-    inactive_days: daysSince(baseBranch?.commit?.author?.date ?? null),
-    status: "ACTIVE",
-    ahead_by: 0,
-    behind_by: 0,
-    compare_status: "equal",
-  }];
+    const sha = branch.commit.sha;
 
-  for (const b of nonBaseBranches) {
-    let headCommit = { date: null, author: null };
+    const commit = await getCommit(repo, sha);
 
-    try {
-      headCommit = await getHeadCommit(repo, b.name);
-    } catch (error) {
-      console.warn(`[WARN] getHeadCommit failed for ${repo}:${b.name} — ${error.message}`);
+    const inactive_days = daysSince(commit.date);
+    const status = branchStatus(inactive_days);
+
+    let compare = {
+      ahead_by: null,
+      behind_by: null,
+      compare_status: "skipped",
+    };
+
+    /**
+     * Solo comparar ramas activas o en riesgo.
+     * Las inactivas no necesitan comparación.
+     */
+    if (branch.name !== base && status !== "INACTIVE") {
+      compare = await compareWithBase(repo, base, branch.name);
     }
 
-    const inactive_days = daysSince(headCommit.date);
-    const compare = await compareWithBase(repo, base, b.name);
-
     results.push({
-      branch: b.name,
-      last_commit: headCommit.date,
-      last_author: headCommit.author,
+      branch: branch.name,
+      last_commit: commit.date,
+      last_author: commit.author,
       inactive_days,
-      status: branchStatus(inactive_days),
+      status,
       ahead_by: compare.ahead_by,
       behind_by: compare.behind_by,
       compare_status: compare.compare_status,

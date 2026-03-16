@@ -13,7 +13,6 @@ import pLimit from "p-limit";
 import { getRepositories } from "./lib/repos.js";
 import { auditRepo } from "./lib/branches.js";
 import { writeJsonReport } from "./lib/reporters/json.js";
-import { writeReposCsv, writeBranchesCsv } from "./lib/reporters/csv.js";
 import { writeHtmlReport } from "./lib/reporters/html.js";
 
 // ── Configuración ─────────────────────────────────────────────────────────────
@@ -84,8 +83,6 @@ async function main() {
 
   console.log("\n[REPORTS] Writing output files...");
   writeJsonReport(allAuditedRepos, OUTPUT_DIR);
-  // writeReposCsv(allAuditedRepos, OUTPUT_DIR); 
-  // writeBranchesCsv(allAuditedRepos, OUTPUT_DIR);
   writeHtmlReport(OUTPUT_DIR);
 
   const checkpointPath = `${OUTPUT_DIR}/checkpoint_repos.json`;
