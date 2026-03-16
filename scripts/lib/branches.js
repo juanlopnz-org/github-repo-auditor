@@ -90,7 +90,7 @@ export async function auditRepo(repoRecord) {
     const commitDate = branch.commit?.commit?.author?.date ?? null;
     const commitAuthor = branch.commit?.commit?.author?.name ?? null;
 
-    const inactive_days = daysSince(commit.date);
+    const inactive_days = daysSince(commitDate);
     const status = branchStatus(inactive_days);
 
     let compare = {
