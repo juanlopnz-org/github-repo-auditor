@@ -51,4 +51,3 @@ export function writeHtmlReport(outputPath) {
   );
 }
 
-console.log("report.html generado correctamente.");

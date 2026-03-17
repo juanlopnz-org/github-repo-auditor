@@ -14,6 +14,19 @@ async function getBranches(repo) {
 }
 
 /**
+ * Traduce el valor del estado de la rama.
+ */
+function translateBranchComparison(compare) {
+  const map = {
+    identical: "IDENTICA",
+    behind: "ATRASADA",
+    ahead: "ADELANTADA",
+    diverged: "DIVERGENTE"
+  };
+  return map[compare] || compare;
+}
+
+/**
  * Compara una rama contra la base.
  */
 async function compareWithBase(repo, base, head) {
@@ -28,7 +41,7 @@ async function compareWithBase(repo, base, head) {
     return {
       ahead_by: data.ahead_by,
       behind_by: data.behind_by,
-      compare_status: data.status,
+      compare_status: translateBranchComparison(data.status),
     };
   } catch (error) {
     const status = error.status ?? "unknown";
@@ -63,6 +76,7 @@ export async function auditRepo(repoRecord) {
   const results = [];
 
   for (const branch of branches) {
+
     const commitDate = branch.commit?.commit?.author?.date ?? null;
     const commitAuthor = branch.commit?.commit?.author?.name ?? null;
 
@@ -70,9 +84,9 @@ export async function auditRepo(repoRecord) {
     const status = branchStatus(inactive_days);
 
     let compare = {
-      ahead_by: 0,
-      behind_by: 0,
-      compare_status: "equal",
+      ahead_by: null,
+      behind_by: null,
+      compare_status: "IDENTICA",
     };
 
     if (branch.name !== base) {
@@ -91,5 +105,21 @@ export async function auditRepo(repoRecord) {
     });
   }
 
-  return { ...repoRecord, branches: results };
+  let hasDiverged = false;
+  let hasBehind = false;
+
+  results.forEach(b => {
+    if (b.compare_status === "DIVERGENTE") hasDiverged = true;
+    else if (b.compare_status === "ATRASADA") hasBehind = true;
+  });
+
+  let riskLevel = "SALUDABLE";
+
+  if (hasDiverged) {
+    riskLevel = "RIESGO DE INTEGRACIÓN";
+  } else if (hasBehind) {
+    riskLevel = "DESACTUALIZADO";
+  }
+
+  return { ...repoRecord, risk_level: riskLevel, branches: results };
 }

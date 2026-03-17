@@ -1,14 +1,6 @@
 import fs from "fs";
 import path from "path";
 
-/**
- * Valida que cada repo tenga branches embebidas y cada branch tenga status.
- * Lanza un error descriptivo en el límite del reporter — no usa ?. para silenciar.
- * El objetivo es que el error apunte al origen del dato corrupto, no al lugar
- * donde explota.
- *
- * @param {unknown[]} auditedRepos
- */
 function assertAuditedRepos(auditedRepos) {
   if (!Array.isArray(auditedRepos) || auditedRepos.length === 0) {
     throw new Error("[ASSERT] auditedRepos must be a non-empty array");
@@ -35,13 +27,6 @@ function assertAuditedRepos(auditedRepos) {
   }
 }
 
-/**
- * Escribe el reporte completo como JSON jerárquico.
- * Cada repo es el aggregate root y contiene sus branches como hijos.
- *
- * @param {Array<import("../repos.js").RepoRecord & { branches: import("../branches.js").BranchRecord[] }>} auditedRepos
- * @param {string} outputDir
- */
 export function writeJsonReport(auditedRepos, outputDir) {
   assertAuditedRepos(auditedRepos);
 
@@ -52,12 +37,12 @@ export function writeJsonReport(auditedRepos, outputDir) {
     total_repos: auditedRepos.length,
     total_branches: allBranches.length,
     summary: {
-      repos_active: auditedRepos.filter(r => r.status === "ACTIVE").length,
-      repos_stale: auditedRepos.filter(r => r.status === "STALE").length,
-      repos_abandoned: auditedRepos.filter(r => r.status === "ABANDONED").length,
-      branches_active: allBranches.filter(b => b.status === "ACTIVE").length,
-      branches_risk: allBranches.filter(b => b.status === "RISK").length,
-      branches_inactive: allBranches.filter(b => b.status === "INACTIVE").length,
+      repos_active: auditedRepos.filter(r => r.status === "ACTIVO").length,
+      repos_stale: auditedRepos.filter(r => r.status === "DESACTUALIZADO").length,
+      repos_abandoned: auditedRepos.filter(r => r.status === "ABANDONADO").length,
+      branches_active: allBranches.filter(b => b.status === "ACTIVO").length,
+      branches_risk: allBranches.filter(b => b.status === "EN RIESGO").length,
+      branches_inactive: allBranches.filter(b => b.status === "INACTIVO").length,
     },
     repos: auditedRepos,
   };

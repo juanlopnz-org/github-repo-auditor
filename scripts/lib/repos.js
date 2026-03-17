@@ -4,20 +4,7 @@ import { daysSince, repoStatus } from "./classifier.js";
 const ORG = process.env.ORG;
 
 /**
- * @typedef {Object} RepoRecord
- * @property {string} repository
- * @property {string} default_branch  
- * @property {number} open_issues
- * @property {string} last_code_push
- * @property {string} last_repo_update
- * @property {number} inactive_days
- * @property {"ACTIVE"|"STALE"|"ABANDONED"} status
- */
-
-/**
  * Obtiene y clasifica todos los repositorios no archivados/deshabilitados de la org.
- *
- * @returns {Promise<RepoRecord[]>}
  */
 export async function getRepositories() {
   console.log(`[REPOS] Fetching repositories for org: ${ORG}`);
@@ -44,9 +31,9 @@ export async function getRepositories() {
 
   console.log(
     `[REPOS] Found ${repos.length} repos — ` +
-    `ACTIVE: ${repos.filter(r => r.status === "ACTIVE").length}, ` +
-    `STALE: ${repos.filter(r => r.status === "STALE").length}, ` +
-    `ABANDONED: ${repos.filter(r => r.status === "ABANDONED").length}`
+    `ACTIVO: ${repos.filter(r => r.status === "ACTIVO").length}, ` +
+    `DESACTUALIZADO: ${repos.filter(r => r.status === "DESACTUALIZADO").length}, ` +
+    `ABANDONADO: ${repos.filter(r => r.status === "ABANDONADO").length}`
   );
 
   return repos;

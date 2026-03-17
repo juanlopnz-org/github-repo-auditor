@@ -31,9 +31,9 @@ export function daysSince(dateString) {
  * @returns {"ACTIVE"|"RISK"|"INACTIVE"}
  */
 export function branchStatus(days) {
-  if (days < INACTIVITY_DAYS) return "ACTIVE";
-  if (days < RISK_DAYS) return "RISK";
-  return "INACTIVE";
+  if (days < INACTIVITY_DAYS) return "ACTIVO";
+  if (days < RISK_DAYS) return "EN RIESGO";
+  return "INACTIVO";
 }
 
 /**
@@ -46,7 +46,7 @@ export function branchStatus(days) {
  * @returns {"ACTIVE"|"STALE"|"ABANDONED"}
  */
 export function repoStatus(days) {
-  if (days < REPO_STALE_DAYS) return "ACTIVE";
-  if (days < REPO_ABANDONED_DAYS) return "STALE";
-  return "ABANDONED";
+  if (days < REPO_STALE_DAYS) return "ACTIVO";
+  if (days < REPO_ABANDONED_DAYS) return "DESACTUALIZADO";
+  return "ABANDONADO";
 }
