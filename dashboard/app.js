@@ -23,6 +23,44 @@ function translateSummaryKey(key) {
   return map[key] || key;
 }
 
+function translateRepoStatus(status) {
+  const map = {
+    ACTIVE: "ACTIVO",
+    STALE: "DESACTUALIZADO",
+    ABANDONED: "ABANDONADO",
+    INACTIVE: "INACTIVO"
+  };
+  return map[status] || status;
+}
+
+function translateBranchStatus(status) {
+  const map = {
+    ACTIVE: "ACTIA",
+    RISK: "EN RIESGO",
+    INACTIVE: "INACTIVA"
+  };
+  return map[status] || status;
+}
+
+function translateBranchComparison(compare) {
+  const map = {
+    equal: "SINCRONIZADA",
+    behind: "ATRASADA",
+    ahead: "ADELANTADA",
+    diverged: "DIVERGENTE"
+  };
+  return map[compare] || compare;
+}
+
+function translateRiskLevel(risk) {
+  const map = {
+    HEALTHY: "SALUDABLE",
+    OUTDATED: "DESACTUALIZADO",
+    INTEGRATION_RISK: "RIESGO DE INTEGRACIÓN"
+  };
+  return map[risk] || risk;
+}
+
 async function loadReport() {
   let data = window.__AUDIT_DATA__;
 
@@ -62,26 +100,21 @@ function buildSummary(summary) {
 
 function repoStatusBadge(status) {
   const s = status.toUpperCase();
+  const label = translateRepoStatus(s);
 
-  if (s === "ACTIVO") return `<span class="badge ok">${s}</span>`;
-  if (s === "DESACTUALIZADO") return `<span class="badge warn">${s}</span>`;
-  return `<span class="badge danger">${s}</span>`;
+  if (s === "ACTIVE") return `<span class="badge ok">${label}</span>`;
+  if (s === "STALE") return `<span class="badge warn">${label}</span>`;
+  return `<span class="badge danger">${label}</span>`;
 }
 
-function branchStatusBadge(status) {
-  const s = status.toUpperCase();
+function branchCompareBadge(compare) {
+  const label = translateBranchComparison(compare);
 
-  if (s === "ACTIVO") return `<span class="badge ok">${s}</span>`;
-  if (s === "EN RIESGO") return `<span class="badge warn">${s}</span>`;
-  return `<span class="badge danger">${s}</span>`;
-}
-
-function branchCompareBadge(status) {
-  if (status === "IDENTICA") return `<span class="badge ok">${status}</span>`;
-  if (status === "ATRASADA") return `<span class="badge warn">${status}</span>`;
-  if (status === "ADELANTADA") return `<span class="badge warn">${status}</span>`;
-  if (status === "DIVERGENTE") return `<span class="badge danger">${status}</span>`;
-  return status;
+  if (compare === "equal") return `<span class="badge ok">${label}</span>`;
+  if (compare === "behind") return `<span class="badge warn">${label}</span>`;
+  if (compare === "ahead") return `<span class="badge warn">${label}</span>`;
+  if (compare === "diverged") return `<span class="badge danger">${label}</span>`;
+  return label;
 }
 
 function selectRepo(repo) {
@@ -108,13 +141,35 @@ function renderReposTable() {
 
   pageRepos.forEach((repo, index) => {
 
-    let riskBadgeClass = "ok";
-    if (repo.risk_level === "RIESGO DE INTEGRACIÓN") riskBadgeClass = "danger";
-    else if (repo.risk_level === "DESACTUALIZADO") riskBadgeClass = "warn";
+    let hasDiverged = false;
+    let hasBehind = false;
 
-    const riskBadge = `<span class="badge ${riskBadgeClass}">${repo.risk_level}</span>`;
+    repo.branches.forEach(b => {
+      if (b.compare_status === "diverged") hasDiverged = true;
+      else if (b.compare_status === "behind") hasBehind = true;
+    });
+
+    let riskLevel = "HEALTHY";
+    let rowClass = "";
+
+    if (hasDiverged) {
+      riskLevel = "INTEGRATION_RISK";
+      rowClass = "row-danger";
+    } else if (hasBehind) {
+      riskLevel = "OUTDATED";
+      rowClass = "row-warn";
+    }
+
+    const riskLabel = translateRiskLevel(riskLevel);
+
+    let riskBadgeClass = "ok";
+    if (riskLevel === "INTEGRATION_RISK") riskBadgeClass = "danger";
+    else if (riskLevel === "OUTDATED") riskBadgeClass = "warn";
+
+    const riskBadge = `<span class="badge ${riskBadgeClass}">${riskLabel}</span>`;
 
     const tr = document.createElement("tr");
+    tr.className = rowClass;
 
     tr.innerHTML = `
       <td class="repo-link" data-index="${start + index}" style="cursor:pointer; color:#60a5fa;">
@@ -123,7 +178,6 @@ function renderReposTable() {
       <td>${riskBadge}</td>
       <td>${repo.branches.length}</td>
       <td>${repo.inactive_days}</td>
-      <td>${repo.status}</td>
       <td>${repo.default_branch}</td>
     `;
 
@@ -201,7 +255,7 @@ function showBranches(repo) {
     html += `
     <tr>
       <td>${branch.branch}</td>
-      <td>${branchStatusBadge(branch.status)}</td>
+      <td>${repoStatusBadge(branch.status)}</td>
       <td>${branch.ahead_by}</td>
       <td>${branch.behind_by}</td>
       <td>${branchCompareBadge(branch.compare_status)}</td>
@@ -216,6 +270,7 @@ function showBranches(repo) {
 }
 
 function sortRepos(column) {
+
   if (sortColumn === column) {
     sortDirection = sortDirection === "asc" ? "desc" : "asc";
   } else {
@@ -235,9 +290,11 @@ function sortRepos(column) {
     if (valA > valB) return sortDirection === "asc" ? 1 : -1;
 
     return 0;
+
   });
 
   renderReposTable();
+
 }
 
 document.getElementById("searchInput").addEventListener("input", e => {
