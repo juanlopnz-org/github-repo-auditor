@@ -85,8 +85,6 @@ export async function auditRepo(repoRecord) {
   const results = [];
 
   for (const branch of branches) {
-
-    const sha = branch.commit.sha;
     const commitDate = branch.commit?.commit?.author?.date ?? null;
     const commitAuthor = branch.commit?.commit?.author?.name ?? null;
 

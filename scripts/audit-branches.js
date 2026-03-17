@@ -64,20 +64,24 @@ async function main() {
   const limit = pLimit(CONCURRENCY);
   let audited = 0;
 
-  const auditedActive = await Promise.all(
-    allRepos.map(repo =>
-      limit(async () => {
-        const auditedRepo = await auditRepo(repo);
-        audited++;
+  const results = [];
 
-        if (audited % CHECKPOINT_INTERVAL === 0) {
-          saveCheckpoint(auditedActive.filter(Boolean));
-        }
+  const tasks = allRepos.map(repo =>
+    limit(async () => {
+      const auditedRepo = await auditRepo(repo);
 
-        return auditedRepo;
-      })
-    )
+      audited++;
+      results.push(auditedRepo);
+
+      if (audited % CHECKPOINT_INTERVAL === 0) {
+        saveCheckpoint([...results]);
+      }
+
+      return auditedRepo;
+    })
   );
+
+  const auditedActive = await Promise.all(tasks);
 
   const allAuditedRepos = auditedActive;
 
