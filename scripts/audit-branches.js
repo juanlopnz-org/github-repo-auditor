@@ -13,7 +13,7 @@ import pLimit from "p-limit";
 import { getRepositories } from "./lib/repos.js";
 import { auditRepo } from "./lib/branches.js";
 import { writeJsonReport } from "./lib/reporters/json.js";
-import { writeReposCsv, writeBranchesCsv } from "./lib/reporters/csv.js";
+import { writeHtmlReport } from "./lib/reporters/html.js";
 
 // ── Configuración ─────────────────────────────────────────────────────────────
 
@@ -22,7 +22,7 @@ if (!ORG) { console.error("[ERROR] ORG env var is missing"); process.exit(1); }
 if (!process.env.GH_TOKEN) { console.error("[ERROR] GH_TOKEN env var is missing"); process.exit(1); }
 
 /** Repos auditados en paralelo simultáneamente. Ajustar según el rate-limit disponible. */
-const CONCURRENCY = parseInt(process.env.AUDIT_CONCURRENCY ?? "5", 10);
+const CONCURRENCY = parseInt(process.env.AUDIT_CONCURRENCY ?? "3", 10);
 
 /** Guardar checkpoint cada N repos auditados. */
 const CHECKPOINT_INTERVAL = parseInt(process.env.CHECKPOINT_INTERVAL ?? "25", 10);
@@ -64,27 +64,30 @@ async function main() {
   const limit = pLimit(CONCURRENCY);
   let audited = 0;
 
-  const auditedActive = await Promise.all(
-    allRepos.map(repo =>
-      limit(async () => {
-        const auditedRepo = await auditRepo(repo);
-        audited++;
+  const results = [];
 
-        if (audited % CHECKPOINT_INTERVAL === 0) {
-          saveCheckpoint(auditedActive.filter(Boolean));
-        }
+  const tasks = allRepos.map(repo =>
+    limit(async () => {
+      const auditedRepo = await auditRepo(repo);
 
-        return auditedRepo;
-      })
-    )
+      audited++;
+      results.push(auditedRepo);
+
+      if (audited % CHECKPOINT_INTERVAL === 0) {
+        saveCheckpoint([...results]);
+      }
+
+      return auditedRepo;
+    })
   );
+
+  const auditedActive = await Promise.all(tasks);
 
   const allAuditedRepos = auditedActive;
 
   console.log("\n[REPORTS] Writing output files...");
-  writeJsonReport(allAuditedRepos, OUTPUT_DIR);       // JSON jerárquico
-  writeReposCsv(allAuditedRepos, OUTPUT_DIR);         // CSV plano de repos (branches strip internamente)
-  writeBranchesCsv(allAuditedRepos, OUTPUT_DIR);      // CSV plano de branches (flatMap internamente)
+  writeJsonReport(allAuditedRepos, OUTPUT_DIR);
+  writeHtmlReport(OUTPUT_DIR);
 
   const checkpointPath = `${OUTPUT_DIR}/checkpoint_repos.json`;
   if (fs.existsSync(checkpointPath)) fs.unlinkSync(checkpointPath);

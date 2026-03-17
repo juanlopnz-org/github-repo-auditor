@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Gobernanza de Ramas</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <header class="header">
+    <div class="header-left">
+      <h1>Gobernanza de Ramas</h1>
+      <span class="subtitle">Auditoría automática de sincronización de repositorios</span>
+    </div>
+
+    <div class="header-right">
+      <div class="kpi">
+        <span class="kpi-label">Repositorios</span>
+        <span id="totalRepos" class="kpi-value">-</span>
+      </div>
+
+      <div class="kpi">
+        <span class="kpi-label">Ramas totales</span>
+        <span id="totalBranches" class="kpi-value">-</span>
+      </div>
+
+      <div class="kpi">
+        <span class="kpi-label">Última actualización</span>
+        <span id="generatedAt" class="kpi-value small">-</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="summary">
+      <h2>Resumen general</h2>
+      <div id="summaryCards" class="cards"></div>
+    </section>
+
+    <section class="repos">
+      <h2>Repositorios auditados</h2>
+
+      <input type="text" id="searchInput" placeholder="Buscar repositorio..." class="search">
+
+      <div class="table-wrapper">
+        <table id="reposTable">
+          <thead>
+            <tr>
+              <th onclick="sortRepos('repository')" style="cursor:pointer">Repositorio</th>
+              <th onclick="sortRepos('risk_level')" style="cursor:pointer">Riesgo</th>
+              <th onclick="sortRepos('branches')" style="cursor:pointer"># Ramas</th>
+              <th onclick="sortRepos('inactive_days')" style="cursor:pointer">Días sin actividad</th>
+              <th onclick="sortRepos('state')" style="cursor:pointer">Estado</th>
+              <th onclick="sortRepos('default_branch')" style="cursor:pointer">Rama principal</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+    </section>
+
+  </main>
+
+  <footer class="footer">
+    Reporte generado automáticamente por el Auditor de Repositorios
+  </footer>
+  <script>
+    const AUDIT_DATA = window.__AUDIT_DATA__ || [];
+  </script>
+  <script src="app.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,26 @@
+# Dependencias
+# node_modules/
+
+# Output generado por el auditor
+output/
+
+# Variables de entorno
+.env
+.env.*
+!.env.example
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Reportes generados en el dashboard (se copian en CI)
+dashboard/report.json
