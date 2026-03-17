@@ -14,28 +14,6 @@ async function getBranches(repo) {
 }
 
 /**
- * Obtiene metadata del commit usando el SHA ya provisto por listBranches.
- * Esto evita usar getBranch().
- */
-async function getCommit(repo, sha) {
-  try {
-    const { data } = await octokit.rest.repos.getCommit({
-      owner: ORG,
-      repo,
-      ref: sha,
-    });
-
-    return {
-      date: data.commit.author?.date ?? null,
-      author: data.commit.author?.name ?? null,
-    };
-  } catch (error) {
-    console.warn(`[WARN] getCommit failed ${repo}@${sha} — ${error.message}`);
-    return { date: null, author: null };
-  }
-}
-
-/**
  * Compara una rama contra la base.
  */
 async function compareWithBase(repo, base, head) {

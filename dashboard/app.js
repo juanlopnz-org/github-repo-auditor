@@ -27,7 +27,8 @@ function translateRepoStatus(status) {
   const map = {
     ACTIVE: "ACTIVO",
     STALE: "DESACTUALIZADO",
-    ABANDONED: "ABANDONADO"
+    ABANDONED: "ABANDONADO",
+    INACTIVE: "INACTIVO"
   };
   return map[status] || status;
 }
@@ -245,7 +246,7 @@ function showBranches(repo) {
     html += `
     <tr>
       <td>${branch.branch}</td>
-      <td>${translateRepoStatus(branch.status)}</td>
+      <td>${repoStatusBadge(branch.status)}</td>
       <td>${branch.ahead_by}</td>
       <td>${branch.behind_by}</td>
       <td>${branchCompareBadge(branch.compare_status)}</td>
