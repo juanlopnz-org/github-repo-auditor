@@ -6,11 +6,35 @@ const ORG = process.env.ORG;
 /**
  * Lista todas las ramas de un repo.
  */
-async function getBranches(repo) {
-  return octokit.paginate(
-    octokit.rest.repos.listBranches,
-    { owner: ORG, repo, per_page: 100 }
-  );
+async function getBranchesGraphQL(repo) {
+  const data = await octokit.graphql(`
+    query($org: String!, $repo: String!) {
+      repository(owner: $org, name: $repo) {
+        defaultBranchRef {
+          name
+        }
+        refs(refPrefix: "refs/heads/", first: 100) {
+          nodes {
+            name
+            target {
+              ... on Commit {
+                oid
+                committedDate
+                author {
+                  name
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  `, {
+    org: ORG,
+    repo,
+  });
+
+  return data.repository;
 }
 
 /**
@@ -62,23 +86,27 @@ async function compareWithBase(repo, base, head) {
  * Auditoría optimizada de ramas.
  */
 export async function auditRepo(repoRecord) {
-  const { repository: repo, default_branch: base } = repoRecord;
+  const { repository: repo } = repoRecord;
 
   let branches;
 
   try {
-    branches = await getBranches(repo);
+    branches = await getBranchesGraphQL(repo);
   } catch (error) {
     console.error(`[ERROR] getBranches failed for ${repo}`);
     return { ...repoRecord, branches: [] };
   }
 
+  const base = branches.defaultBranchRef?.name;
+
   const results = [];
 
-  for (const branch of branches) {
+  for (const branch of repoRecord.refs.nodes) {
 
-    const commitDate = branch.commit?.commit?.author?.date ?? null;
-    const commitAuthor = branch.commit?.commit?.author?.name ?? null;
+    const commit = branch.target;
+
+    const commitDate = commit?.committedDate ?? null;
+    const commitAuthor = commit?.author?.name ?? null;
 
     const inactive_days = daysSince(commitDate);
     const status = branchStatus(inactive_days);
