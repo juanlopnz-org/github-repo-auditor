@@ -42,6 +42,13 @@ async function loadReport() {
 
   repos = data.repos;
   filteredRepos = [...repos];
+
+  const savedRows = localStorage.getItem("rowsPerPage");
+  if (savedRows) {
+    rowsPerPage = parseInt(savedRows);
+    document.getElementById("rowsPerPageSelect").value = savedRows;
+  }
+
   renderReposTable();
 }
 
@@ -255,6 +262,13 @@ document.getElementById("searchInput").addEventListener("input", e => {
 
   renderReposTable();
 
+});
+
+document.getElementById("rowsPerPageSelect").addEventListener("change", e => {
+  rowsPerPage = parseInt(e.target.value);
+  localStorage.setItem("rowsPerPage", rowsPerPage);
+  currentPage = 1;
+  renderReposTable();
 });
 
 loadReport();
