@@ -11,7 +11,7 @@ on:
     - cron: "0 11 * * 1" # Lunes 6:00am Colombia (11:00 UTC)
 
 env:
-  ORG: bocc-principal
+  ORG: juanlopnz-org
   INACTIVITY_DAYS: 90
   AUDIT_CONCURRENCY: ${{ inputs.concurrency || '3' }}
   SHAREPOINT_SITE_NAME: AuditReports
