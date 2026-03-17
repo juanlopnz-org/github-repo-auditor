@@ -8,7 +8,7 @@ on:
         required: false
         default: "3"
   schedule:
-    - cron: "0 11 * * 1" # Lunes 6:00am Colombia (11:00 UTC)
+    - cron: "0 11 * * *" # Lunes 6:00am Colombia (11:00 UTC)
 
 env:
   ORG: juanlopnz-org

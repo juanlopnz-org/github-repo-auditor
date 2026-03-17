@@ -1,5 +1,6 @@
 import { octokit } from "./octokit.js";
 import { daysSince, branchStatus } from "./classifier.js";
+import pLimit from "p-limit";
 
 const ORG = process.env.ORG;
 
@@ -87,6 +88,7 @@ async function compareWithBase(repo, base, head) {
  */
 export async function auditRepo(repoRecord) {
   const { repository: repo } = repoRecord;
+  const branchLimit = pLimit(5);
 
   let branches;
 
@@ -99,39 +101,41 @@ export async function auditRepo(repoRecord) {
 
   const base = branches.defaultBranchRef?.name;
 
-  const results = [];
+  const branchTasks = branches.refs.nodes.map(branch =>
+    branchLimit(async () => {
 
-  for (const branch of branches.refs.nodes) {
+      const commit = branch.target;
 
-    const commit = branch.target;
+      const commitDate = commit?.committedDate ?? null;
+      const commitAuthor = commit?.author?.name ?? null;
 
-    const commitDate = commit?.committedDate ?? null;
-    const commitAuthor = commit?.author?.name ?? null;
+      const inactive_days = daysSince(commitDate);
+      const status = branchStatus(inactive_days);
 
-    const inactive_days = daysSince(commitDate);
-    const status = branchStatus(inactive_days);
+      let compare = {
+        ahead_by: null,
+        behind_by: null,
+        compare_status: "IDENTICA",
+      };
 
-    let compare = {
-      ahead_by: null,
-      behind_by: null,
-      compare_status: "IDENTICA",
-    };
+      if (branch.name !== base) {
+        compare = await compareWithBase(repo, base, branch.name);
+      }
 
-    if (branch.name !== base) {
-      compare = await compareWithBase(repo, base, branch.name);
-    }
+      return {
+        branch: branch.name,
+        last_commit: commitDate,
+        last_author: commitAuthor,
+        inactive_days,
+        status,
+        ahead_by: compare.ahead_by,
+        behind_by: compare.behind_by,
+        compare_status: compare.compare_status,
+      };
+    })
+  );
 
-    results.push({
-      branch: branch.name,
-      last_commit: commitDate,
-      last_author: commitAuthor,
-      inactive_days,
-      status,
-      ahead_by: compare.ahead_by,
-      behind_by: compare.behind_by,
-      compare_status: compare.compare_status,
-    });
-  }
+  const results = await Promise.all(branchTasks);
 
   let hasDiverged = false;
   let hasBehind = false;
