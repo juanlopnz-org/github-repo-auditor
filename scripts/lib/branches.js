@@ -101,7 +101,7 @@ export async function auditRepo(repoRecord) {
 
   const results = [];
 
-  for (const branch of repoData.refs.nodes) {
+  for (const branch of branches.refs.nodes) {
 
     const commit = branch.target;
 
